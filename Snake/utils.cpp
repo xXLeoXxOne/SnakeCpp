@@ -1,7 +1,3 @@
-//
-// Created by msk4x on 16.06.2021.
-//
-
 #include "utils.h"
 #include <iostream>
 #include <thread>
@@ -23,6 +19,19 @@ void cls() {
     FillConsoleOutputCharacter(hOut, TEXT(' '), length, topLeft, &written);
     FillConsoleOutputAttribute(hOut, csbi.wAttributes, length, topLeft, &written);
     SetConsoleCursorPosition(hOut, topLeft);
+}
+
+
+void setColor(int font, int background) {
+    HANDLE hConsole;
+    int colorcode = font + (background * 16);
+    hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    FlushConsoleInputBuffer(hConsole);
+    SetConsoleTextAttribute(hConsole, colorcode);
+}
+
+void setTitle(std::string title) {
+    SetConsoleTitle(title.c_str());
 }
 
 void setCursorPosition(int x, int y) {
