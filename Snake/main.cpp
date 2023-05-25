@@ -13,7 +13,26 @@
 #include <chrono>
 
 using namespace std;
-using namespace std::this_thread;
+using namespace this_thread;
+
+enum Color {
+    black = 0,
+    dark_blue = 1,
+    dark_green = 2,
+    light_blue = 3,
+    dark_red = 4,
+    magenta = 5,
+    orange = 6,
+    light_gray = 7,
+    gray = 8,
+    blue = 9,
+    green = 10,
+    cyan = 11,
+    red = 12,
+    pink = 13,
+    yellow = 14,
+    white = 15,
+};
 
 struct Snake {
     int x;
@@ -28,18 +47,28 @@ struct Fruit {
 
 void start();
 
-const int width = 40;
-const int height = 20;
+const int width = 28;
+const int height = 28;
+int highscore{0};
 int lastDirection{0};
-bool endlessMode{0};
-bool gameover{0};
-bool blinking{0};
+bool endlessMode{false};
+bool gameover{false};
+bool blinking{false};
+int snakeColor{0};
 list<Snake> snakeBody;
 struct Fruit fruit{5, 5};
 
 void addPart() {
     struct Snake s{snakeBody.back().x, snakeBody.back().y, static_cast<int>(snakeBody.size())};
     snakeBody.push_back(s);
+}
+
+void nextColor() {
+    if (snakeColor == 15) {
+        snakeColor = 2;
+    } else {
+        snakeColor++;
+    }
 }
 
 bool snakeContains(int x, int y, bool excludeHead) {
@@ -57,13 +86,16 @@ bool snakeContains(int x, int y, bool excludeHead) {
 
 void newFruit() {
     while (true) {
-        int x = randNum(1, width), y = randNum(1, height);
+        int x = randNum(1, width / 2) * 2, y = randNum(1, height);
         if (!snakeContains(x, y, false)) {
             fruit.x = x;
             fruit.y = y;
             setCursorPosition(fruit.x, fruit.y);
+            setColor(Color::red, Color::black);
             cout << "o";
-            setCursorPosition(0, height);
+            setColor(Color::white, Color::black);
+            setCursorPosition(0, 0);
+            nextColor();
             return;
         }
     }
@@ -71,41 +103,62 @@ void newFruit() {
 
 void blinkGameover() {
     while (blinking) {
-        setCursorPosition((width / 2) - 6, (height / 2) + 1);
+        setCursorPosition((width) - 6, (height / 2) + 1);
         cout << "PRESS ESC TO END GAME";
-        setCursorPosition(0, height);
+        setCursorPosition((width) - 6, (height / 2) + 2);
+        cout << "OR ANY KEY TO RETRY...";
+        setCursorPosition(0, 00);
         sleep_for(500ms);
-        setCursorPosition((width / 2) - 6, (height / 2) + 1);
+        setCursorPosition((width) - 6, (height / 2) + 1);
         cout << "                     ";
-        setCursorPosition(0, height);
+        setCursorPosition((width) - 6, (height / 2) + 2);
+        cout << "                      ";
+        setCursorPosition(0, 0);
         sleep_for(500ms);
     }
 }
 
 void gameOver() {
+    list<Snake>::iterator it;
+    for (it = snakeBody.end(); it != snakeBody.begin(); --it) {
+        sleep_for(250ms);
+        setCursorPosition(it->x, it->y);
+        cout << " ";
+        setCursorPosition(0, 0);
+    }
+    setTitle("GAME OVER");
     gameover = true;
     cls();
-    setCursorPosition(width / 2, height / 2);
+    setCursorPosition(width, height / 2);
     cout << "GAME OVER";
-    setCursorPosition((width / 2) - 6, (height / 2) + 1);
+    setCursorPosition((width) - 6, (height / 2) + 1);
     cout << "PRESS ESC TO END GAME";
-    setCursorPosition((width / 2) - 6, (height / 2) + 2);
+    setCursorPosition((width) - 6, (height / 2) + 2);
+    cout << "OR ANY KEY TO RETRY...";
+    setCursorPosition((width) - 6, (height / 2) + 3);
+    setColor(Color::orange, Color::black);
     cout << "SCORE: " << snakeBody.size();
+    if (snakeBody.size() > highscore) {
+        highscore = snakeBody.size();
+    }
+    cout << " HIGHSCORE: " << highscore;
+    setColor(Color::white, Color::black);
     thread t(blinkGameover);
-    blinking = 1;
-    t.detach();
+    blinking = true;
+    t.join();
+    start();
 }
 
 void changeVal(Snake &sn, int direction) {
     switch (direction) {
         case 1:
-            sn.x++;
+            sn.x += 2;
             break;
         case 2:
             sn.y++;
             break;
         case 3:
-            sn.x--;
+            sn.x -= 2;
             break;
         case 4:
             sn.y--;
@@ -113,8 +166,8 @@ void changeVal(Snake &sn, int direction) {
     }
     if (endlessMode) {
         if (sn.x < 1) {
-            sn.x = width;
-        } else if (sn.x > width) {
+            sn.x = width * 2;
+        } else if (sn.x > width * 2) {
             sn.x = 1;
         } else if (sn.y < 1) {
             sn.y = height;
@@ -122,7 +175,7 @@ void changeVal(Snake &sn, int direction) {
             sn.y = 1;
         }
     } else {
-        if (sn.x < 1 || sn.x > width || sn.y < 1 || sn.y > height || snakeContains(sn.x, sn.y, true)) {
+        if (sn.x < 1 || sn.x > width * 2 || sn.y < 1 || sn.y > height || snakeContains(sn.x, sn.y, true)) {
             gameOver();
             return;
         }
@@ -158,22 +211,42 @@ void moveSnake(int direction) {
             return;
         }
         setCursorPosition(snakeBody.front().x, snakeBody.front().y);
-        cout << "+";
-        setCursorPosition(0, height);
+        setColor(snakeColor, Color::black);
+        switch (direction) {
+            case 1:
+                cout << ">";
+                break;
+            case 2:
+                cout << "v";
+                break;
+            case 3:
+                cout << "<";
+                break;
+            case 4:
+                cout << "^";
+                break;
+        }
+        setColor(Color::white, Color::black);
+        setCursorPosition(0, 0);
     }
 }
 
-void drawField(int height, int width) {
+void drawField() {
     cls();
-    cout << "------------------------------------------" << endl;
+    setColor(Color::orange, Color::black);
+    cout << "----------------------------------------------------------" << endl;
     for (int i = 0; i < height; i++) {
+        setColor(Color::orange, Color::black);
         cout << "|";
         for (int ii = 0; ii < width; ii++) {
-            cout << " ";
+            setColor(Color::white, Color::black);
+            cout << "  ";
         }
+        setColor(Color::orange, Color::black);
         cout << "|" << endl;
     }
-    cout << "------------------------------------------\n\n" << endl;
+    cout << "----------------------------------------------------------" << endl;
+    setColor(Color::white, Color::black);
 }
 
 void buttonPressed(int key) {
@@ -201,42 +274,45 @@ void buttonPressed(int key) {
         default:
             break;
     }
+    sleep_for(50ms);
 }
 
 void buttonPressListener() {
-    while (1) {
-        int c = getch();
+    while (true) {
+        int c = _getch();
         if (c == ESCAPE) {
             exit(1);
         }
+        blinking = false;
         buttonPressed(c);
     }
 }
 
 void gameLoop() {
-    while (1) {
-        if (!gameover) {
-            sleep_for(100ms);
-            moveSnake(lastDirection);
-        }
+    while (!gameover) {
+        sleep_for(125ms);
+        moveSnake(lastDirection);
     }
 }
 
 void start() {
+    setTitle("Snake");
     snakeBody.clear();
-    blinking = 0;
-    gameover = 0;
-    lastDirection = 1;
-    struct Snake s1{randNum(1, width), randNum(1, height), 0};
+    blinking = false;
+    gameover = false;
+    lastDirection = 0;
+    struct Snake s1{randNum(1, width) * 2, randNum(1, height), 0};
     snakeBody.push_back(s1);
     addPart();
     addPart();
     addPart();
-    drawField(height, width);
+    drawField();
     newFruit();
     setCursorPosition(snakeBody.front().x, snakeBody.front().y);
-    cout << "+";
-    setCursorPosition(0, height);
+    setColor(Color::white, Color::black);
+    cout << ">";
+    setColor(Color::white, Color::black);
+    setCursorPosition(0, 0);
     thread t1(gameLoop);
     t1.join();
 }
